@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghost Link - Executive Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #00ff88;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .upload-area {
+            border: 2px dashed #00ff88;
+            padding: 40px;
+            margin: 20px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-area:hover {
+            background-color: #2a2a2a;
+        }
+        button {
+            background-color: #00ff88;
+            color: #121212;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #00cc6a;
+        }
+        #results {
+            margin-top: 30px;
+            text-align: left;
+            display: none;
+        }
+        .alert-box {
+            background-color: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-left: 5px solid #cc0000;
+        }
+        .dispatch-box {
+            background-color: #2b2b2b;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 5px solid #00ff88;
+        }
+        .dispatch-box p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Ghost Link OS</h1>
+        <p>Base Model Prototype v1.0 | Visual Augmentation Engine</p>
+
+        <div class="upload-area" id="drop-zone">
+            <p>Upload Job Site Scan (POV Camera)</p>
+            <input type="file" id="file-input" style="display: none;" accept="image/*">
+        </div>
+        
+        <button id="scan-btn">Initiate AI Scan</button>
+
+        <div id="results">
+            <h3>System Output:</h3>
+            <div class="alert-box" id="hud-alert">
+                </div>
+            <div class="dispatch-box" id="dispatch-info">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const scanBtn = document.getElementById('scan-btn');
+        const resultsDiv = document.getElementById('results');
+
+        // Click to open file dialog
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Show selected file name
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                dropZone.innerHTML = `<p style="color: #00ff88;">Selected: ${fileInput.files[0].name}</p>`;
+            }
+        });
+
+        // Send to FastAPI Backend
+        scanBtn.addEventListener('click', async () => {
+            if (fileInput.files.length === 0) {
+                alert("Please select a photo first.");
+                return;
+            }
+
+            scanBtn.innerText = "Scanning Environment...";
+            
+            const formData = new FormData();
+            formData.append("job_site_photo", fileInput.files[0]);
+
+            try {
+                // Connects to your Python server
+                const response = await fetch("http://127.0.0.1:8000/ghost-link/scan/", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // Populate the dashboard
+                document.getElementById('hud-alert').innerText = data.hud_display;
+                document.getElementById('dispatch-info').innerHTML = `
+                    <p><strong>Alert Level:</strong> ${data.foreman_task_prompt.alert_level}</p>
+                    <p><strong>Generated Task:</strong> ${data.foreman_task_prompt.generated_task}</p>
+                    <p><strong>AI Suggestion:</strong> ${data.foreman_task_prompt.base_model_suggestion}</p>
+                `;
+
+                resultsDiv.style.display = "block";
+                scanBtn.innerText = "Initiate New Scan";
+
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Connection failed. Is the Python server running?");
+                scanBtn.innerText = "Initiate AI Scan";
+            }
+        });
+    </script>
+</body>
+</html>
